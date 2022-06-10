@@ -2,19 +2,17 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-
 contract CampaignFactory {
     address[] public deployedCampaigns;
 
-    function createCampaign(uint minimum) public {
+    function createCampaign(uint256 minimum) public {
         address newCampaign = address(new Campaign(minimum, msg.sender));
         deployedCampaigns.push(newCampaign);
     }
 
-    function getDeployedCampaign() public view returns(address[] memory){
+    function getDeployedCampaign() public view returns (address[] memory) {
         return deployedCampaigns;
     }
-
 }
 
 /**
@@ -22,55 +20,55 @@ contract CampaignFactory {
  * @dev Implements voting process along with vote delegation
  */
 contract Campaign {
-
     struct Request {
         string description;
-        uint value;
+        uint256 value;
         address payable recipient;
         bool complete;
-        uint approvalCount;
+        uint256 approvalCount;
         mapping(address => bool) approvals;
     }
 
-    uint private numRequests;
-    uint private currentIndex;
-    mapping(uint => Request) public requests;
-
+    uint256 private numRequests;
+    mapping(uint256 => Request) public requests;
 
     address public manager;
-    uint public minimumContribution;
+    uint256 public minimumContribution;
     mapping(address => bool) public approvers;
-    uint public approversCount;
+    uint256 public approversCount;
 
     modifier restricted() {
         require(manager == msg.sender);
         _;
     }
 
-    constructor(uint minimum, address creator){
+    constructor(uint256 minimum, address creator) {
         manager = creator;
         minimumContribution = minimum;
     }
 
     function contribute() public payable {
-       require(msg.value > minimumContribution);
+        require(msg.value > minimumContribution);
 
         approvers[msg.sender] = true;
         approversCount++;
     }
 
-
-    function createRequest(string memory description, uint value, address payable recipient) payable public restricted {
-        Request storage newRequestInStorage = requests[currentIndex];
+    function createRequest(
+        string memory description,
+        uint256 value,
+        address payable recipient
+    ) public payable restricted {
+        Request storage newRequestInStorage = requests[numRequests];
         newRequestInStorage.description = description;
         newRequestInStorage.value = value;
         newRequestInStorage.recipient = recipient;
         newRequestInStorage.complete = false;
         newRequestInStorage.approvalCount = 0;
-        currentIndex++;
+        numRequests++;
     }
 
-    function approveRequest(uint index) public {
+    function approveRequest(uint256 index) public {
         Request storage request = requests[index];
 
         require(approvers[msg.sender]);
@@ -80,7 +78,7 @@ contract Campaign {
         request.approvalCount++;
     }
 
-    function finalizeRequest(uint index) public restricted {
+    function finalizeRequest(uint256 index) public restricted {
         Request storage request = requests[index];
 
         require(request.approvalCount > (approversCount / 2));
@@ -90,6 +88,27 @@ contract Campaign {
         request.complete = true;
     }
 
+    function getSummary()
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            address
+        )
+    {
+        return (
+            minimumContribution,
+            address(this).balance,
+            numRequests,
+            approversCount,
+            manager
+        );
+    }
 
-
+    function getRequestsCount() public view returns (uint256) {
+        return numRequests;
+    }
 }
